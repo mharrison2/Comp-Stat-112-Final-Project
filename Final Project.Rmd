@@ -6,6 +6,60 @@ date: "2023-11-30"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)  
+library(maps)
+library(ggmap)
+library(lubridate)
+
 ```
 
-This is a change!
+```{r}
+
+load('LAPOP.rda')
+LAPOP <- da36562.0001
+rm(da36562.0001)
+
+```
+
+```{r}
+SouthAmerica <- LAPOP %>% 
+  filter(PAIS %in% c("(17) Argentina", "(10) Bolivia", "(08) Colombia", "(15) Brazil", "(12) Paraguay", "(14) Uruguay", "(11) Peru", "(13) Chile", "(09) Ecuador", "(16) Venezuela", "(27) Suriname")) %>% 
+  mutate(PAIS = substr(PAIS, 6, 20))
+
+World_map %>% 
+  filter(continent == "South America") %>% 
+  ggplot() 
+  
+plot(SouthAmerica)
+
+```
+
+```{r}
+library(sf)
+
+SouthAmericasf <- read_sf("SouthAmerica.shp")
+
+
+SouthAmerica %>% 
+  ggplot() +
+  geom_map(
+    map = SouthAmericasf,
+    aes(map_id = CC)
+  )
+
+```
+
+```{r}
+library(foreign)
+SouthAmericadbf <- read.dbf("SouthAmerica.dbf", as.is = FALSE)
+
+plot(SouthAmericadbf)
+```
+
+```{r}
+SouthAmerica %>% 
+  
+```
+
