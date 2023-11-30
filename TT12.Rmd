@@ -1,0 +1,66 @@
+---
+title: "TT3, Doctor Who Episodes"
+author: "Florencia Perez Nunez"
+output: html_document
+date: "2023-11-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+```{r}
+
+tuesdata <- tidytuesdayR::tt_load('2023-11-28')
+
+drwho_episodes <- tuesdata$drwho_episodes
+drwho_directors <- tuesdata$drwho_directors
+drwho_writers <- tuesdata$drwho_writers
+
+```
+
+# Exploratory graphs 
+
+```{r}
+drwho_episodes %>% 
+  ggplot(aes(x = first_aired, fill = type)) +
+  geom_histogram()
+```
+
+
+```{r}
+drwho_episodes %>% 
+  ggplot(aes(x= rating, y = uk_viewers)) +
+  geom_col()
+```
+
+# What are the top "Doctor Who" director rating trends
+
+```{r}
+drwho_episodes2 <- drwho_episodes %>% 
+  left_join(drwho_directors, by = join_by(story_number)) %>% 
+  select(director, uk_viewers, rating, type) %>% 
+  group_by(director) %>% 
+  mutate(n_director = n()) %>% 
+  filter(n_director >= 6)
+
+ggplot(drwho_episodes2, aes(x = director, y = rating)) +
+  geom_violin(aes(color = director))+
+  geom_boxplot(aes(fill=director)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, family = "palatino"), 
+        axis.text.y = element_text(family = "palatino"),
+        axis.title = element_text(family = "palatino", face = "bold"),
+        legend.position = "none", 
+        plot.title = element_text(face = "bold", family = "palatino", hjust = 0.5),
+        plot.background = element_rect(fill = "linen")
+        ) +
+  labs(title = "Top `Doctor Who` director rating trends", caption = "TT3 Flor", x = "Director", y = "Rating") +
+  scale_fill_brewer(palette = "Pastel2") + scale_color_brewer(palette = "Pastel2") 
+  
+
+```
+
