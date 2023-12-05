@@ -52,7 +52,7 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageB3))--
+  geom_sf(aes(fill = averageB3))
 
 ```
 ```{r}
@@ -61,8 +61,10 @@ SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lo
 SouthAmericaLS3 <- SouthAmerica %>% 
   select(YEAR, PAIS, LS3) %>% 
   drop_na() %>% 
-  group_by(PAIS) %>% 
-  summarise(averageLS3 = mean(LS3))
+  group_by(PAIS) %>%  
+  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>% 
+  mutate(LS3num = as.numeric(LS3num)) %>% 
+  summarise(averageLS3 = mean(LS3num))
 
 SouthAmericasf <- read_sf("vc965bq8111") %>%
   group_by(name) %>%
@@ -72,7 +74,7 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageLS3))--
+  geom_sf(aes(fill = averageLS3))
 ```
 
 ```{r}
@@ -83,5 +85,10 @@ SouthAmericaDEM2 <- SouthAmerica %>%
   mutate(total_resp_country = n()) %>% 
   mutate(answer2_country = ) ## finish this line
   mutate(perctent_DEM2 = )
+```
+
+
+```{r}
+unique(SouthAmericaLS3$LS3)
 ```
 
