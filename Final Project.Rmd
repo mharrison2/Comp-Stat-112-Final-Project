@@ -36,6 +36,8 @@ SouthAmerica <- LAPOP %>%
 ```
 
 ```{r}
+#HUMAN RIGHTS 
+
 SouthAmericaB3 <- SouthAmerica %>% 
   select(YEAR, PAIS, B3) %>% 
   drop_na() %>% 
@@ -50,8 +52,27 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageB3))
+  geom_sf(aes(fill = averageB3))--
 
+```
+```{r}
+# life satisfaction 
+
+SouthAmericaLS3 <- SouthAmerica %>% 
+  select(YEAR, PAIS, LS3) %>% 
+  drop_na() %>% 
+  group_by(PAIS) %>% 
+  summarise(averageLS3 = mean(LS3))
+
+SouthAmericasf <- read_sf("vc965bq8111") %>%
+  group_by(name) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  mutate(name = stringr::str_to_lower(name))
+  
+
+SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+  ggplot() +
+  geom_sf(aes(fill = averageLS3))--
 ```
 
 ```{r}
