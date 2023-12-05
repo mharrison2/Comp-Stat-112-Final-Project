@@ -6,12 +6,17 @@ date: "2023-11-30"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 library(tidyverse)
 library(ggplot2)
+library(gplots)
+library(maps) 
 library(dplyr)  
-library(maps)
 library(ggmap)
 library(lubridate)
+library(ggthemes)
+library(RColorBrewer) 
+library(sf)
 
 ```
 
@@ -28,38 +33,34 @@ SouthAmerica <- LAPOP %>%
   filter(PAIS %in% c("(17) Argentina", "(10) Bolivia", "(08) Colombia", "(15) Brazil", "(12) Paraguay", "(14) Uruguay", "(11) Peru", "(13) Chile", "(09) Ecuador", "(16) Venezuela", "(27) Suriname")) %>% 
   mutate(PAIS = substr(PAIS, 6, 20))
 
-World_map %>% 
-  filter(continent == "South America") %>% 
-  ggplot() 
-  
-plot(SouthAmerica)
-
 ```
 
 ```{r}
-library(sf)
+SouthAmericaB3 <- SouthAmerica %>% 
+  select(YEAR, PAIS, B3) %>% 
+  drop_na() %>% 
+  group_by(PAIS) %>% 
+  summarise(averageB3 = mean(B3))
 
-SouthAmericasf <- read_sf("SouthAmerica.shp")
+SouthAmericasf <- read_sf("vc965bq8111") %>%
+  group_by(name) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  mutate(name = stringr::str_to_lower(name))
+  
 
-
-SouthAmerica %>% 
+SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_map(
-    map = SouthAmericasf,
-    aes(map_id = CC)
-  )
+  geom_sf(aes(fill = averageB3))
 
 ```
 
 ```{r}
-library(foreign)
-SouthAmericadbf <- read.dbf("SouthAmerica.dbf", as.is = FALSE)
-
-plot(SouthAmericadbf)
-```
-
-```{r}
-SouthAmerica %>% 
-  
+SouthAmericaDEM2 <- SouthAmerica %>% 
+  select(YEAR, PAIS, DEM2) %>% 
+  drop_na() %>% 
+  group_by(PAIS) %>% 
+  mutate(total_resp_country = n()) %>% 
+  mutate(answer2_country = ) ## finish this line
+  mutate(perctent_DEM2 = )
 ```
 
