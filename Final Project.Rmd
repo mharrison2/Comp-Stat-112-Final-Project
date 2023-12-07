@@ -36,7 +36,7 @@ SouthAmerica <- LAPOP %>%
 ```
 
 ```{r}
-#HUMAN RIGHTS 
+# HUMAN RIGHTS (To what extent do you think that citizens' basic rights are well protected by the political system of country?) (1= not at all, 7= a lot)
 
 SouthAmericaB3 <- SouthAmerica %>% 
   select(YEAR, PAIS, B3) %>% 
@@ -50,13 +50,21 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
   mutate(name = stringr::str_to_lower(name))
   
 
-SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+(SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageB3))
+  geom_sf(aes(fill = averageB3)) +
+  labs(title = "Perception of Human Rights in South America", subtitle = "From a scale of 1 ('Not at all') to 7 ('A lot')", fill = "Average Perception of HR") +
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  theme(legend.position = "right")
+ ) %>% plotly::ggplotly()
+
+SouthAmericaB3 %>% 
+  arrange(desc(averageB3))
 
 ```
 ```{r}
-# life satisfaction 
+# LIFE SATISFACTION (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
 
 SouthAmericaLS3 <- SouthAmerica %>% 
   select(YEAR, PAIS, LS3) %>% 
@@ -75,20 +83,77 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
   geom_sf(aes(fill = averageLS3))
+
+SouthAmericaLS3 %>% 
+  arrange(averageLS3)
 ```
 
 ```{r}
+# DEMOCRACY (Percent of people choosing "Democracy is preferable to any other form of government" and not "authoritarian " "it doesn't matter") 
+
 SouthAmericaDEM2 <- SouthAmerica %>% 
   select(YEAR, PAIS, DEM2) %>% 
   drop_na() %>% 
   group_by(PAIS) %>% 
   mutate(total_resp_country = n()) %>% 
-  mutate(answer2_country = ) ## finish this line
-  mutate(perctent_DEM2 = )
+  filter(DEM2 == "(2) Democracy is preferable to any other form of government") %>% 
+  mutate(total_dem2_country = n()) %>% 
+  distinct(PAIS, .keep_all = TRUE) %>% 
+  mutate(percent_DEM2 = total_dem2_country / total_resp_country)
+
+
+SouthAmericasf <- read_sf("vc965bq8111") %>%
+  group_by(name) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  mutate(name = stringr::str_to_lower(name))
+  
+
+SouthAmericasf %>% left_join(SouthAmericaDEM2 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+  ggplot() +
+  geom_sf(aes(fill = percent_DEM2))
+
+SouthAmericaDEM2 %>% 
+  select(PAIS, percent_DEM2) %>% 
+  arrange(desc(percent_DEM2))
 ```
 
-
 ```{r}
-unique(SouthAmericaLS3$LS3)
+# ECONOMIC SITUATION SOCT1 (How would you describe the country's economic situation?) (Percent of people that chose  "Good" or "Very Good" and not "fair, "bad" "very bad")
+
+
+#shows NA values for this question (per country)
+SouthAmerica %>% 
+  select(YEAR, PAIS, SOCT1) %>% 
+  group_by(PAIS) %>% 
+  mutate(total_resp_country = n()) %>%
+  mutate(num_na = sum(is.na(SOCT1))) %>% 
+  distinct(PAIS, .keep_all = TRUE)
+
+
+
+SouthAmericaSOCT1 <- SouthAmerica %>% 
+  select(YEAR, PAIS, SOCT1) %>% 
+  drop_na() %>% 
+  group_by(PAIS) %>% 
+  mutate(total_resp_country = n()) %>% 
+  filter(SOCT1 %in% c("(2) Good", "(1) Very Good")) %>% 
+  mutate(total_good_country = n()) %>% 
+  distinct(PAIS, .keep_all = TRUE) %>% 
+  mutate(percent_good = total_good_country / total_resp_country)
+
+
+SouthAmericasf <- read_sf("vc965bq8111") %>%
+  group_by(name) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  mutate(name = stringr::str_to_lower(name))
+  
+
+SouthAmericasf %>% left_join(SouthAmericaSOCT1 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+  ggplot() +
+  geom_sf(aes(fill = percent_good))
+
+SouthAmericaSOCT1 %>% 
+  select(PAIS, percent_good) %>% 
+  arrange(desc(percent_good))
 ```
 
