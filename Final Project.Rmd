@@ -41,8 +41,12 @@ SouthAmerica <- LAPOP %>%
 SouthAmericaB3 <- SouthAmerica %>% 
   select(YEAR, PAIS, B3) %>% 
   drop_na() %>% 
-  group_by(PAIS) %>% 
-  summarise(averageB3 = mean(B3))
+  group_by(PAIS) %>%
+  mutate(total_resp_b3 = n()) %>% 
+  filter( B3 >= 5) %>% 
+  mutate(total_positive_b3 = n()) %>% 
+  distinct(PAIS, .keep_all = TRUE) %>% 
+  mutate(percent_good_b3 = 100 * total_positive_b3 / total_resp_b3) 
 
 SouthAmericasf <- read_sf("vc965bq8111") %>%
   group_by(name) %>%
@@ -52,27 +56,31 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 (SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageB3)) +
-  labs(title = "Perception of Human Rights in South America", subtitle = "From a scale of 1 ('Not at all') to 7 ('A lot')", fill = "Average Perception of HR") +
+  geom_sf(aes(fill = percent_good_b3)) +
   theme_map() +
   theme(legend.background = element_blank()) +
   theme(legend.position = "right")
  ) %>% plotly::ggplotly()
 
 SouthAmericaB3 %>% 
-  arrange(desc(averageB3))
+  arrange(desc(percent_good_b3))
 
+#  labs(title = "How Many South Americans   ", subtitle = "Respondents were asked: To what extent do you think that citizens' basic rights are well protected by the political system of country?", fill = "percent of respondants who answered that the political system highly protects their basic rights. % of Respondents with a Positive View of Basic Rights' Protection") 
 ```
+
 ```{r}
 # LIFE SATISFACTION (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
 
 SouthAmericaLS3 <- SouthAmerica %>% 
   select(YEAR, PAIS, LS3) %>% 
   drop_na() %>% 
-  group_by(PAIS) %>%  
-  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>% 
-  mutate(LS3num = as.numeric(LS3num)) %>% 
-  summarise(averageLS3 = mean(LS3num))
+  group_by(PAIS) %>%
+  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
+  mutate(total_resp_country = n()) %>% 
+  filter(LS3num == "1") %>% 
+  mutate(total_positive_resp = n()) %>% 
+  distinct(PAIS, .keep_all = TRUE) %>% 
+  mutate(percent_good_ls3 = 100 * total_positive_resp / total_resp_country) 
 
 SouthAmericasf <- read_sf("vc965bq8111") %>%
   group_by(name) %>%
@@ -80,12 +88,15 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
   mutate(name = stringr::str_to_lower(name))
   
 
-SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+(SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = averageLS3))
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  theme(legend.position = "right") +
+  geom_sf(aes(fill = percent_good_ls3))) %>% plotly::ggplotly()
 
 SouthAmericaLS3 %>% 
-  arrange(averageLS3)
+  arrange(percent_good_ls3)
 ```
 
 ```{r}
@@ -99,7 +110,7 @@ SouthAmericaDEM2 <- SouthAmerica %>%
   filter(DEM2 == "(2) Democracy is preferable to any other form of government") %>% 
   mutate(total_dem2_country = n()) %>% 
   distinct(PAIS, .keep_all = TRUE) %>% 
-  mutate(percent_DEM2 = total_dem2_country / total_resp_country)
+  mutate(percent_good_dem2 = 100 * total_dem2_country / total_resp_country)
 
 
 SouthAmericasf <- read_sf("vc965bq8111") %>%
@@ -110,11 +121,11 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 SouthAmericasf %>% left_join(SouthAmericaDEM2 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = percent_DEM2))
+  geom_sf(aes(fill = percent_good_dem2))
 
 SouthAmericaDEM2 %>% 
-  select(PAIS, percent_DEM2) %>% 
-  arrange(desc(percent_DEM2))
+  select(PAIS, percent_good_dem2) %>% 
+  arrange(desc(percent_good_dem2))
 ```
 
 ```{r}
@@ -129,8 +140,6 @@ SouthAmerica %>%
   mutate(num_na = sum(is.na(SOCT1))) %>% 
   distinct(PAIS, .keep_all = TRUE)
 
-
-
 SouthAmericaSOCT1 <- SouthAmerica %>% 
   select(YEAR, PAIS, SOCT1) %>% 
   drop_na() %>% 
@@ -139,7 +148,7 @@ SouthAmericaSOCT1 <- SouthAmerica %>%
   filter(SOCT1 %in% c("(2) Good", "(1) Very Good")) %>% 
   mutate(total_good_country = n()) %>% 
   distinct(PAIS, .keep_all = TRUE) %>% 
-  mutate(percent_good = total_good_country / total_resp_country)
+  mutate(percent_good_soct1 = 100 * total_good_country / total_resp_country)
 
 
 SouthAmericasf <- read_sf("vc965bq8111") %>%
@@ -150,10 +159,46 @@ SouthAmericasf <- read_sf("vc965bq8111") %>%
 
 SouthAmericasf %>% left_join(SouthAmericaSOCT1 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
-  geom_sf(aes(fill = percent_good))
+  geom_sf(aes(fill = percent_good_soct1))
 
 SouthAmericaSOCT1 %>% 
-  select(PAIS, percent_good) %>% 
-  arrange(desc(percent_good))
+  select(PAIS, percent_good_soct1) %>% 
+  arrange(desc(percent_good_soct1))
+```
+
+```{r}
+# scatterplots LS3 x B3:
+
+LS3clean <- SouthAmericaLS3 %>% 
+  select(PAIS, percent_good_ls3)
+
+B3clean <- SouthAmericaB3 %>% 
+  select(PAIS, percent_good_b3)
+
+left_join(LS3clean, B3clean) %>% 
+  ggplot(aes(x=percent_good_b3, y=percent_good_ls3, color = PAIS)) +
+  geom_point() 
+# change gkyph to name of country
+
+
+# LS3 x DEM2:
+
+DEM2clean <- SouthAmericaDEM2 %>% 
+  select(PAIS, percent_good_dem2)
+
+left_join(LS3clean, DEM2clean) %>% 
+  ggplot(aes(x=percent_good_dem2, y=percent_good_ls3, color = PAIS)) +
+  geom_point()
+
+
+# LS3 x SOCT1
+
+SOCT1clean <- SouthAmericaSOCT1 %>% 
+  select(PAIS, percent_good_soct1)
+
+
+left_join(LS3clean, SOCT1clean) %>% 
+  ggplot(aes(x=percent_good_soct1, y=percent_good_ls3, color = PAIS)) +
+  geom_point()
 ```
 
