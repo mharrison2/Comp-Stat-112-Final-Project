@@ -300,6 +300,90 @@ questions_over_time <- left_join(questions_over_time, DEM2_over_time)
 questions_over_time <- left_join(questions_over_time, SOCT1_over_time)
 
 
+questions_over_time %>% 
+  ggplot(aes(x=percent_good_ls3, y=percent_good_dem2, color=PAIS)) +
+  geom_point() +
+  facet_wrap(~ YEAR)
+
+
+questions_over_time <- questions_over_time %>% 
+  mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
+
+# first hald decade
+questions_over_time %>% 
+  filter(YearCat == "2004-08") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_dem2, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+questions_over_time %>% 
+  filter(YearCat == "2004-08") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_soct1, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+
+questions_over_time %>% 
+  filter(YearCat == "2004-08") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+# second half decade
+questions_over_time %>% 
+  filter(YearCat == "2009-14") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_dem2, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+questions_over_time %>% 
+  filter(YearCat == "2009-14") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_soct1, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+questions_over_time %>% 
+  filter(YearCat == "2009-14") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=YEAR)) +
+  geom_text(aes(label =PAIS))
+
+
+#pivot longer:
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(x=`Percent Good`, fill =Question)) +
+  geom_density() +
+  facet_grid(~YearCat)
+
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Bolivia") %>% 
+  ggplot(aes(x=`Percent Good`, fill =Question)) +
+  geom_density() +
+  facet_grid(~YearCat)
 ```
 
+```{r}
+#VENEZUELA 
+
+questions_over_time %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(y=percent_good_ls3, x=YEAR, color=percent_good_dem2)) +
+  geom_text(aes(label =PAIS))
+
+questions_over_time %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(y=percent_good_ls3, x=YEAR, color=percent_good_soct1)) +
+  geom_text(aes(label =PAIS))
+
+
+questions_over_time %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(y=percent_good_ls3, x=YEAR, color=percent_good_b3)) +
+  geom_text(aes(label =PAIS))
+
+`
+
+
+```
 
