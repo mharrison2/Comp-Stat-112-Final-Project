@@ -202,3 +202,104 @@ left_join(LS3clean, SOCT1clean) %>%
   geom_point()
 ```
 
+```{r}
+#trying to show change over time in answers :)
+
+# Life satisfaction 
+LS3_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, LS3) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>%
+  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
+  mutate(total_ls3 = n()) %>% 
+  filter(LS3num == "1") %>% 
+  mutate(total_good_ls3 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_ls3 = 100 * total_good_ls3 / total_ls3) %>% 
+  select(PAIS, YEAR, percent_good_ls3, total_good_ls3, total_ls3)
+
+LS3_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_ls3)) +
+  geom_point() +
+  facet_wrap(~ PAIS)
+
+LS3_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_ls3, color=PAIS)) +
+  geom_point()
+
+
+# Gov protects basic rights
+B3_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, B3) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>%
+  mutate(total_b3 = n()) %>% 
+  filter(B3 >= 5) %>% 
+  mutate(total_good_b3 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_b3 = 100 * total_good_b3 / total_b3) %>% 
+  select(PAIS, YEAR, percent_good_b3, total_good_b3, total_b3)
+
+B3_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_b3)) +
+  geom_point() +
+  facet_wrap(~ PAIS)
+
+B3_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_b3, color=PAIS)) +
+  geom_point()
+
+
+# Democracy 
+DEM2_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, DEM2) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>% 
+  mutate(total_dem2 = n()) %>% 
+  filter(DEM2 == "(2) Democracy is preferable to any other form of government") %>% 
+  mutate(total_good_dem2 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_dem2 = 100 * total_good_dem2 / total_dem2) %>% 
+  select(PAIS, YEAR, percent_good_dem2, total_good_dem2, total_dem2)
+
+DEM2_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_dem2)) +
+  geom_point() +
+  facet_wrap(~ PAIS)
+
+DEM2_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_dem2, color=PAIS)) +
+  geom_point()
+
+ 
+#Economic situation 
+SOCT1_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, SOCT1) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>% 
+  mutate(total_soct1 = n()) %>% 
+  filter(SOCT1 %in% c("(2) Good", "(1) Very Good")) %>% 
+  mutate(total_good_soct1 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_soct1 = 100 * total_good_soct1 / total_soct1) %>% 
+  select(PAIS, YEAR, percent_good_soct1, total_good_soct1, total_soct1)
+
+SOCT1_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_soct1)) +
+  geom_point() +
+  facet_wrap(~ PAIS)
+
+SOCT1_over_time %>% 
+  ggplot(aes(x=YEAR, y=percent_good_soct1, color=PAIS)) +
+  geom_point()
+
+
+
+questions_over_time <- left_join(LS3_over_time, B3_over_time)
+questions_over_time <- left_join(questions_over_time, DEM2_over_time)
+questions_over_time <- left_join(questions_over_time, SOCT1_over_time)
+
+
+```
+
+
