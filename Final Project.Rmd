@@ -293,7 +293,11 @@ SOCT1_over_time %>%
   ggplot(aes(x=YEAR, y=percent_good_soct1, color=PAIS)) +
   geom_point()
 
+```
 
+```{r}
+
+# new data set: all 4 questions over time and visuals
 
 questions_over_time <- left_join(LS3_over_time, B3_over_time)
 questions_over_time <- left_join(questions_over_time, DEM2_over_time)
@@ -305,11 +309,10 @@ questions_over_time %>%
   geom_point() +
   facet_wrap(~ YEAR)
 
-
 questions_over_time <- questions_over_time %>% 
   mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
 
-# first hald decade
+# first half decade
 questions_over_time %>% 
   filter(YearCat == "2004-08") %>% 
   ggplot(aes(y=percent_good_ls3, x=percent_good_dem2, color=YEAR)) +
@@ -321,10 +324,18 @@ questions_over_time %>%
   geom_text(aes(label =PAIS))
 
 
-questions_over_time %>% 
-  filter(YearCat == "2004-08") %>% 
-  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=YEAR)) +
-  geom_text(aes(label =PAIS))
+# animated basic rights and life satisfaction over time for all countries!
+library(gganimate)
+pp_anim <- questions_over_time %>% 
+  #filter(YearCat == "2004-08") %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=PAIS)) +
+  geom_text(aes(label =PAIS)) + 
+  geom_hline(yintercept = 40) +
+  geom_vline(xintercept = 35) + theme_classic() + transition_states(YEAR)
+
+animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
+
+#if we do this for one country (case study): add geom_path to shwo the journey
 
 # second half decade
 questions_over_time %>% 
@@ -344,7 +355,6 @@ questions_over_time %>%
 
 
 #pivot longer:
-
 questions_over_time %>% 
   select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
   pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
@@ -361,6 +371,29 @@ questions_over_time %>%
   ggplot(aes(x=`Percent Good`, fill =Question)) +
   geom_density() +
   facet_grid(~YearCat)
+
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`)) +
+  geom_point() + facet_grid(~Question)
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Bolivia") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`)) +
+  geom_point() + facet_grid(~Question)
+
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`, color=Question)) +
+  geom_point() + geom_line()
 ```
 
 ```{r}
@@ -381,9 +414,6 @@ questions_over_time %>%
   filter(PAIS == "Venezuela") %>% 
   ggplot(aes(y=percent_good_ls3, x=YEAR, color=percent_good_b3)) +
   geom_text(aes(label =PAIS))
-
-`
-
 
 ```
 
