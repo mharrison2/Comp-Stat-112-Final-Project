@@ -335,6 +335,28 @@ pp_anim <- questions_over_time %>%
 
 animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
 
+
+# animated dem2 and life satisfaction over time for all countries!
+library(gganimate)
+pp_anim <- questions_over_time %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_dem2, color=PAIS)) +
+  geom_text(aes(label =PAIS)) + 
+  geom_hline(yintercept = 40) +
+  geom_vline(xintercept = 50) + theme_classic() + transition_states(YEAR)
+
+animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
+
+
+# animated soct1 and life satisfaction over time for all countries!
+library(gganimate)
+pp_anim <- questions_over_time %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_soct1, color=PAIS)) +
+  geom_text(aes(label =PAIS)) + 
+  geom_hline(yintercept = 40) +
+  geom_vline(xintercept = 50) + theme_classic() + transition_states(YEAR)
+
+animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
+
 #if we do this for one country (case study): add geom_path to shwo the journey
 
 # second half decade
@@ -387,11 +409,24 @@ questions_over_time %>%
   ggplot(aes(x=YEAR, y=`Percent Good`)) +
   geom_point() + facet_grid(~Question)
 
-
 questions_over_time %>% 
   select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
   pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
   filter(PAIS == "Venezuela") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`, color=Question)) +
+  geom_point() + geom_line()
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Bolivia") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`, color=Question)) +
+  geom_point() + geom_line()
+
+questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(PAIS == "Colombia") %>% 
   ggplot(aes(x=YEAR, y=`Percent Good`, color=Question)) +
   geom_point() + geom_line()
 ```
