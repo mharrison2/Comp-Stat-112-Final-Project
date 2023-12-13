@@ -455,30 +455,20 @@ questions_over_time %>%
 ```{r}
 # LIFE SATISFACTION map animination (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
 
-SouthAmericaLS3 <- SouthAmerica %>% 
-  select(YEAR, PAIS, LS3) %>% 
-  drop_na() %>% 
-  group_by(PAIS) %>%
-  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
-  mutate(total_resp_country = n()) %>% 
-  filter(LS3num == "1") %>% 
-  mutate(total_positive_resp = n()) %>% 
-  distinct(PAIS, .keep_all = TRUE) %>% 
-  mutate(percent_good_ls3 = 100 * total_positive_resp / total_resp_country) 
-
 SouthAmericasf <- read_sf("vc965bq8111") %>%
   group_by(name) %>%
   summarise(geometry = st_combine(geometry)) %>%
   mutate(name = stringr::str_to_lower(name))
   
 
+# Explicitly categorize percent good and include NA as a category
 library(gganimate)
-map_anim <- SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+map_anim <- SouthAmericasf %>% left_join(questions_over_time %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
+  geom_sf(aes(fill = percent_good_ls3)) +
   theme_map() +
   theme(legend.background = element_blank()) +
-  theme(legend.position = "right") +
-  geom_sf(aes(fill = percent_good_ls3)) + transition_states(YEAR)
+  theme(legend.position = "right") + transition_states(YEAR)
 
 animate(map_anim, nframes = 20, fps = 1,renderer = av_renderer())
 
@@ -486,7 +476,6 @@ animate(map_anim, nframes = 20, fps = 1,renderer = av_renderer())
 # Animated basic rights and life satisfaction over time for all countries! - Inbal
 library(gganimate)
 pp_anim <- questions_over_time %>% 
-  #filter(YearCat == "2004-08") %>% 
   ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=PAIS)) +
   geom_text(aes(label =PAIS)) + 
   geom_hline(yintercept = 40) +
@@ -498,7 +487,7 @@ animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
 # LS3 all countries over time animation - Inbal
 library(gganimate)
 pp_anim <- questions_over_time %>% 
-  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1, YearCat) %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1) %>% 
   pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
   filter(Question == "percent_good_ls3") %>% 
   ggplot(aes(x=YEAR, y=`Percent Good`, color=PAIS)) +
@@ -510,7 +499,7 @@ animate(pp_anim, nframes = 10, fps = 1,renderer = av_renderer())
 ```{r}
 # Scatterplot, facetted by country, LS3 over time - Maya
 
-LS3_over_time%>%
+questions_over_time %>%
   ggplot(aes(x= YEAR, y=percent_good_ls3)) +
   geom_point(color = "darkmagenta") +
   geom_line(color = "darkmagenta") +
@@ -542,12 +531,12 @@ colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "
 colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_dem2"] <- "Democracy most preferable"
 colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_soct1"] <- "Good economic situation"
 questions_over_time_Bolivia %>%
-  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy most preferable",  "High life satisfaction", "YearCat")) %>%
+  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy most preferable",  "High life satisfaction")) %>%
   pivot_longer(3:6, names_to = "Categories", values_to = "Percent Good", values_drop_na = FALSE) %>%
   filter(PAIS == "Bolivia") %>%
   ggplot(aes(x=YEAR, y=`Percent Good`, color=Categories)) +
   geom_point() + geom_line() +
-  labs(title = "Bolivia's Positive Perceptions", subtitle = "Life Satisfaction, Democracy, Basic Rights, and the Economy From 2004 - 2014", x= "Year", y= "Participants with positive response (%)") +
+  labs(title = "Bolivia's Positive Perceptions", subtitle = "Life Satisfaction, Democracy, Basic Rights, and the Economy From 2004 - 2014", x= "Year", y= "Pecrentage of Agreement / Participants with positive response (%)",fill = '') +
   theme_classic() + scale_color_brewer(palette = "Pastel2") +
   theme(plot.title = element_text(face = "bold"))
 
