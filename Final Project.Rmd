@@ -26,6 +26,13 @@ load('LAPOP.rda')
 LAPOP <- da36562.0001
 rm(da36562.0001)
 
+sf_use_s2(FALSE)
+SouthAmericasf <- read_sf("vc965bq8111") %>%
+  group_by(name) %>%
+  summarise(geometry = st_combine(geometry)) %>%
+  mutate(name = stringr::str_to_lower(name))
+  
+
 ```
 
 ```{r}
@@ -48,11 +55,6 @@ SouthAmericaB3 <- SouthAmerica %>%
   distinct(PAIS, .keep_all = TRUE) %>% 
   mutate(percent_good_b3 = 100 * total_positive_b3 / total_resp_b3) 
 
-SouthAmericasf <- read_sf("vc965bq8111") %>%
-  group_by(name) %>%
-  summarise(geometry = st_combine(geometry)) %>%
-  mutate(name = stringr::str_to_lower(name))
-  
 
 (SouthAmericasf %>% left_join(SouthAmericaB3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
@@ -71,36 +73,43 @@ SouthAmericaB3 %>%
 ```{r}
 # LIFE SATISFACTION (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
 
+#Brianna heavily edited this; use example for others
 SouthAmericaLS3 <- SouthAmerica %>% 
+  mutate(PAIS = stringr::str_to_lower(PAIS)) %>%
   select(YEAR, PAIS, LS3) %>% 
   drop_na() %>% 
-  group_by(PAIS) %>%
   mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
-  mutate(total_resp_country = n()) %>% 
-  filter(LS3num == "1") %>% 
-  mutate(total_positive_resp = n()) %>% 
-  distinct(PAIS, .keep_all = TRUE) %>% 
-  mutate(percent_good_ls3 = 100 * total_positive_resp / total_resp_country) 
-
-SouthAmericasf <- read_sf("vc965bq8111") %>%
-  group_by(name) %>%
-  summarise(geometry = st_combine(geometry)) %>%
-  mutate(name = stringr::str_to_lower(name))
+  count(PAIS,YEAR,GoodLS3 = LS3num == "1") %>%
+  group_by(PAIS,YEAR) %>%
+  mutate(percent_good_ls3 = 100 * n / sum(n))  %>%
+  filter(GoodLS3) 
   
+  
+SouthAmericaLS3 <- SouthAmericaLS3 %>%  right_join(expand_grid(PAIS =unique(SouthAmericasf$name), YEAR = unique(SouthAmericaLS3$YEAR)) %>% filter(!is.na(YEAR)))
+
+SouthAmericas_map_data <- SouthAmericasf %>% left_join(SouthAmericaLS3, by = c('name' = 'PAIS'))
+
 
 library(gganimate)
-map_anim <- SouthAmericasf %>% left_join(SouthAmericaLS3 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
+library(gifski)
+#map_anim <- 
+  SouthAmericas_map_data %>% 
+  mutate(LS3_Cat = fct_na_value_to_level(cut(percent_good_ls3,5),level='No Data')) %>%
+  filter(YEAR == 2012) %>%
   ggplot() +
+  geom_sf(aes(fill = LS3_Cat),linewidth = .05) +
+  labs(fill = ' Percent Satisifed with Life') +
+  scale_fill_manual(values = c(colorRampPalette(c("white","firebrick"))(5),'lightgrey')) +
   theme_map() +
   theme(legend.background = element_blank()) +
-  theme(legend.position = "right") +
-  geom_sf(aes(fill = percent_good_ls3)) + transition_states(YEAR)
+  theme(legend.position = "right") #+
+  #transition_time(YEAR)
 
-animate(map_anim, nframes = 20, fps = 1,renderer = av_renderer())
-
+#animate(map_anim)
+#anim_save("ls3.gif",map_anim)
 
 SouthAmericaLS3 %>% 
-  arrange(percent_good_ls3)
+  arrange(YEAR, percent_good_ls3)
 ```
 
 ```{r}
@@ -116,10 +125,6 @@ SouthAmericaDEM2 <- SouthAmerica %>%
   distinct(PAIS, .keep_all = TRUE) %>% 
   mutate(percent_good_dem2 = 100 * total_dem2_country / total_resp_country)
 
-SouthAmericasf <- read_sf("vc965bq8111") %>%
-  group_by(name) %>%
-  summarise(geometry = st_combine(geometry)) %>%
-  mutate(name = stringr::str_to_lower(name))
   
 SouthAmericasf %>% left_join(SouthAmericaDEM2 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
@@ -153,11 +158,6 @@ SouthAmericaSOCT1 <- SouthAmerica %>%
   mutate(percent_good_soct1 = 100 * total_good_country / total_resp_country)
 
 
-SouthAmericasf <- read_sf("vc965bq8111") %>%
-  group_by(name) %>%
-  summarise(geometry = st_combine(geometry)) %>%
-  mutate(name = stringr::str_to_lower(name))
-  
 
 SouthAmericasf %>% left_join(SouthAmericaSOCT1 %>% mutate(PAIS = stringr::str_to_lower(PAIS)),by = c('name' = 'PAIS')) %>% 
   ggplot() +
