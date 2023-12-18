@@ -1,9 +1,13 @@
 ---
 title: "Final Project"
+author: "Maya, Flor, and Inbal"
 output: html_document
-date: "2023-11-30"
+date: "2023-12-19"
 ---
 
+## Life Satisfaction in South America
+
+#### Set up and data cleaning
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -21,7 +25,6 @@ library(sf)
 ```
 
 ```{r}
-
 load('LAPOP.rda')
 LAPOP <- da36562.0001
 rm(da36562.0001)
@@ -31,19 +34,210 @@ sf_use_s2(FALSE)
 #  group_by(name) %>%
 #  summarise(geometry = st_combine(geometry)) %>%
 #  mutate(name = stringr::str_to_lower(name))
-  
 
 library(rnaturalearth)
 SouthAmericasf <- ne_countries(continent = 'South America',returnclass = 'sf') %>%
   mutate(name = stringr::str_to_lower(admin))
 
 ```
-
 ```{r}
 SouthAmerica <- LAPOP %>% 
   filter(PAIS %in% c("(17) Argentina", "(10) Bolivia", "(08) Colombia", "(15) Brazil", "(12) Paraguay", "(14) Uruguay", "(11) Peru", "(13) Chile", "(09) Ecuador", "(16) Venezuela", "(27) Suriname")) %>% 
   mutate(PAIS = substr(PAIS, 6, 20))
 rm(LAPOP)
+```
+
+```{r}
+
+# Creating our datasets
+
+LS3_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, LS3) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>%
+  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
+  mutate(total_ls3 = n()) %>% 
+  filter(LS3num == "1") %>% 
+  mutate(total_good_ls3 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_ls3 = 100 * total_good_ls3 / total_ls3) %>% 
+  select(PAIS, YEAR, percent_good_ls3, total_good_ls3, total_ls3)
+
+# Gov protects basic rights
+B3_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, B3) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>%
+  mutate(total_b3 = n()) %>% 
+  filter(B3 >= 5) %>% 
+  mutate(total_good_b3 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_b3 = 100 * total_good_b3 / total_b3) %>% 
+  select(PAIS, YEAR, percent_good_b3, total_good_b3, total_b3)
+
+# Democracy 
+DEM2_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, DEM2) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>% 
+  mutate(total_dem2 = n()) %>% 
+  filter(DEM2 == "(2) Democracy is preferable to any other form of government") %>% 
+  mutate(total_good_dem2 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_dem2 = 100 * total_good_dem2 / total_dem2) %>% 
+  select(PAIS, YEAR, percent_good_dem2, total_good_dem2, total_dem2)
+
+#Economic situation 
+SOCT1_over_time <- SouthAmerica %>% 
+  select(YEAR, PAIS, SOCT1) %>% 
+  drop_na() %>% 
+  group_by(PAIS, YEAR) %>% 
+  mutate(total_soct1 = n()) %>% 
+  filter(SOCT1 %in% c("(2) Good", "(1) Very Good")) %>% 
+  mutate(total_good_soct1 = n()) %>% 
+  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
+  mutate(percent_good_soct1 = 100 * total_good_soct1 / total_soct1) %>% 
+  select(PAIS, YEAR, percent_good_soct1, total_good_soct1, total_soct1)
+
+questions_over_time <- left_join(LS3_over_time, B3_over_time)
+questions_over_time <- left_join(questions_over_time, DEM2_over_time)
+questions_over_time <- left_join(questions_over_time, SOCT1_over_time)
+questions_over_time <- questions_over_time %>% 
+  mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
+
+```
+
+# Final Visuals
+
+```{r}
+# LIFE SATISFACTION map animination (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
+
+library(gganimate)
+SouthAmericaLS3 <- SouthAmerica %>% 
+  mutate(PAIS = stringr::str_to_lower(PAIS)) %>%
+  select(YEAR, PAIS, LS3) %>% 
+  drop_na() %>% 
+  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
+  count(PAIS,YEAR,GoodLS3 = LS3num == "1") %>%
+  group_by(PAIS,YEAR) %>%
+  mutate(percent_good_ls3 = 100 * n / sum(n))  %>%
+  filter(GoodLS3) 
+
+
+questions_over_time <- questions_over_time %>% 
+  mutate(name = stringr::str_to_lower(PAIS))
+  
+questions_over_time_MAP <- questions_over_time %>%
+right_join(expand_grid(name =unique(SouthAmericasf$name), YEAR = unique(questions_over_time$YEAR)) %>% filter(!is.na(YEAR))) %>% 
+select(YEAR, name, percent_good_ls3)
+
+SouthAmericas_map_data <- SouthAmericasf %>% left_join(questions_over_time_MAP, by = c('name' = 'name'))
+
+#These two lines, run in the console, fix the error about crs
+#install.packages('devtools')
+#devtools::install_version("transformr", version = "0.1.3")
+library(transformr)
+library(gganimate)
+library(gifski)
+map_anim <- 
+  SouthAmericas_map_data %>% 
+  arrange(YEAR) %>%
+  mutate(LS3_Cat = factor(percent_good_ls3)) %>% 
+  mutate(LS3_Cat = fct_rev(LS3_Cat)) %>% 
+  mutate(LS3_Cat = fct_na_value_to_level(cut(percent_good_ls3,5),level='No Data')) %>%
+  ggplot() +
+  geom_sf(aes(fill = LS3_Cat),linewidth = .05) +
+  labs(fill = '% of Respondents with High Life Satisfaction') +
+  scale_fill_manual(values = c(colorRampPalette(c("white","darkgreen"))(5),'lightgrey')) +
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  theme(legend.position = "right") +
+  transition_states(YEAR) + labs(title = 'High Life Satisfaction in South America: {closest_state}')
+
+animate(map_anim, nframes = 20, fps = 1, renderer = gifski_renderer())
+
+anim_save("ls3_map.gif",map_anim)
+```
+
+```{r}
+# LS3 all countries over time animation - Inbal
+library(gganimate)
+pp_anim <- questions_over_time %>% 
+  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1) %>% 
+  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
+  filter(Question == "percent_good_ls3") %>% 
+  ggplot(aes(x=YEAR, y=`Percent Good`, color=PAIS, group = PAIS)) +
+  geom_point() + geom_line() + theme_classic() +
+transition_reveal(YEAR) + labs(title = "High Life Satisfaction Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Year", color="Country")
+
+animate(pp_anim, renderer = gifski_renderer())
+
+anim_save("ls3_scatter_plot.gif", pp_anim)
+
+```
+
+```{r}
+# Scatter plot, faceted by country, LS3 over time - Maya
+
+questions_over_time %>%
+  ggplot(aes(x= YEAR, y=percent_good_ls3)) +
+  geom_point(color = "darkmagenta") +
+  geom_line(color = "darkmagenta") +
+  facet_wrap(~PAIS) +
+  labs(x = "Year", y = "Respondents who Reported High Life Satisfaction (%)", title = "Positive Perception of Life Satisfaction Over Time in South America")+
+   theme_classic()+
+  theme(axis.text.x = element_text(angle = 45, hjust=.7))
+```
+
+```{r}
+
+# Bolivia's LS3 + B3 over time animiation - Flor
+library(gganimate)
+pp_anim <- questions_over_time %>%
+  filter(PAIS == "Bolivia") %>%
+  ggplot() +
+    geom_point(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS)) + geom_path(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS),color = "darkmagenta") +
+  #geom_text(data = __, aes(label =PAIS)) +
+  theme_classic() +
+  labs(title = "Bolivia's High Life Satisfaction and Govt. Protection of Basic Rights", subtitle = "From 2004-2014", x = "Participants who Reported Good Government Protection of Basic Rights (%)" ,y = "Participants who Reported High Life Satisfaction (%)") +
+ transition_reveal(YEAR)
+animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
+
+```
+
+```{r}
+# Scatter plot of Bolivia with all 4 questions over time - Flor
+questions_over_time_Bolivia <- questions_over_time
+colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_ls3"] <- "High life satisfaction"
+colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_b3"] <- "Govt. protects basic rights"
+colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_dem2"] <- "Democracy is most preferable"
+colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_soct1"] <- "Good economic situation"
+questions_over_time_Bolivia %>%
+  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy most preferable",  "High life satisfaction")) %>%
+  pivot_longer(3:6, names_to = "Categories", values_to = "Percent Good", values_drop_na = FALSE) %>%
+  filter(PAIS == "Bolivia") %>%
+  ggplot(aes(x=YEAR, y=`Percent Good`, color=Categories)) +
+  geom_point() + geom_line() +
+  labs(title = "Bolivia's Positive Perceptions", subtitle = "Life Satisfaction, Democracy, Basic Rights, and the Economy From 2004 - 2014", x= "Year", y= "Pecrentage of Agreement",fill = '') +
+  theme_classic() + scale_color_brewer(palette = "Pastel2") +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+
+
+### Older iterative visuals (not used in our presentation or write up)
+
+```{r}
+# Animated basic rights and life satisfaction over time for all countries! - Inbal
+library(gganimate)
+pp_anim <- questions_over_time %>% 
+  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=PAIS)) +
+  geom_text(aes(label =PAIS)) + 
+  geom_hline(yintercept = 40) +
+  geom_vline(xintercept = 35) + theme_classic() + transition_states(YEAR) + labs(title = "High Life Satisfaction and Basic Right Protection Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Percent of Respondents who reported ___", color="Country")
+
+animate(pp_anim, renderer = gifski_renderer())
+
 ```
 
 ```{r}
@@ -218,19 +412,6 @@ left_join(LS3clean, SOCT1clean) %>%
 ```{r}
 #trying to show change over time in answers :)
 
-# Life satisfaction 
-LS3_over_time <- SouthAmerica %>% 
-  select(YEAR, PAIS, LS3) %>% 
-  drop_na() %>% 
-  group_by(PAIS, YEAR) %>%
-  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
-  mutate(total_ls3 = n()) %>% 
-  filter(LS3num == "1") %>% 
-  mutate(total_good_ls3 = n()) %>% 
-  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
-  mutate(percent_good_ls3 = 100 * total_good_ls3 / total_ls3) %>% 
-  select(PAIS, YEAR, percent_good_ls3, total_good_ls3, total_ls3)
-
 LS3_over_time %>% 
   ggplot(aes(x=YEAR, y=percent_good_ls3)) +
   geom_point() +
@@ -242,17 +423,6 @@ LS3_over_time %>%
 
 
 # Gov protects basic rights
-B3_over_time <- SouthAmerica %>% 
-  select(YEAR, PAIS, B3) %>% 
-  drop_na() %>% 
-  group_by(PAIS, YEAR) %>%
-  mutate(total_b3 = n()) %>% 
-  filter(B3 >= 5) %>% 
-  mutate(total_good_b3 = n()) %>% 
-  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
-  mutate(percent_good_b3 = 100 * total_good_b3 / total_b3) %>% 
-  select(PAIS, YEAR, percent_good_b3, total_good_b3, total_b3)
-
 B3_over_time %>% 
   ggplot(aes(x=YEAR, y=percent_good_b3)) +
   geom_point() +
@@ -264,17 +434,6 @@ B3_over_time %>%
 
 
 # Democracy 
-DEM2_over_time <- SouthAmerica %>% 
-  select(YEAR, PAIS, DEM2) %>% 
-  drop_na() %>% 
-  group_by(PAIS, YEAR) %>% 
-  mutate(total_dem2 = n()) %>% 
-  filter(DEM2 == "(2) Democracy is preferable to any other form of government") %>% 
-  mutate(total_good_dem2 = n()) %>% 
-  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
-  mutate(percent_good_dem2 = 100 * total_good_dem2 / total_dem2) %>% 
-  select(PAIS, YEAR, percent_good_dem2, total_good_dem2, total_dem2)
-
 DEM2_over_time %>% 
   ggplot(aes(x=YEAR, y=percent_good_dem2)) +
   geom_point() +
@@ -286,17 +445,6 @@ DEM2_over_time %>%
 
  
 #Economic situation 
-SOCT1_over_time <- SouthAmerica %>% 
-  select(YEAR, PAIS, SOCT1) %>% 
-  drop_na() %>% 
-  group_by(PAIS, YEAR) %>% 
-  mutate(total_soct1 = n()) %>% 
-  filter(SOCT1 %in% c("(2) Good", "(1) Very Good")) %>% 
-  mutate(total_good_soct1 = n()) %>% 
-  distinct(PAIS, YEAR, .keep_all = TRUE) %>% 
-  mutate(percent_good_soct1 = 100 * total_good_soct1 / total_soct1) %>% 
-  select(PAIS, YEAR, percent_good_soct1, total_good_soct1, total_soct1)
-
 SOCT1_over_time %>% 
   ggplot(aes(x=YEAR, y=percent_good_soct1)) +
   geom_point() +
@@ -309,14 +457,6 @@ SOCT1_over_time %>%
 ```
 
 ```{r}
-
-# new data set: all 4 questions over time and visuals
-
-questions_over_time <- left_join(LS3_over_time, B3_over_time)
-questions_over_time <- left_join(questions_over_time, DEM2_over_time)
-questions_over_time <- left_join(questions_over_time, SOCT1_over_time)
-questions_over_time <- questions_over_time %>% 
-  mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
 
 questions_over_time %>% 
   ggplot(aes(x=percent_good_ls3, y=percent_good_dem2, color=PAIS)) +
@@ -458,144 +598,6 @@ questions_over_time %>%
   filter(PAIS == "Venezuela") %>% 
   ggplot(aes(y=percent_good_ls3, x=YEAR, color=percent_good_b3)) +
   geom_text(aes(label =PAIS))
-
-```
-
-
-
-# Final Visuals 
-### (in progress, but the ones we'll most likley use)
-
-```{r}
-# LIFE SATISFACTION map animination (In general how satisfied are you with your life?) (1 = very satisfied, 4 = very dissatisfied)
-
-
-# Explicitly categorize percent good and include NA as a category
-library(gganimate)
-SouthAmericaLS3 <- SouthAmerica %>% 
-  mutate(PAIS = stringr::str_to_lower(PAIS)) %>%
-  select(YEAR, PAIS, LS3) %>% 
-  drop_na() %>% 
-  mutate(LS3num = fct_recode(LS3, "1" = "(1) Very Satisfied", "2" = "(2) Somewhat Satisfied", "3" = "(3) Somewhat Dissatisfied", "4" = "(4) Very Dissatisfied")) %>%
-  count(PAIS,YEAR,GoodLS3 = LS3num == "1") %>%
-  group_by(PAIS,YEAR) %>%
-  mutate(percent_good_ls3 = 100 * n / sum(n))  %>%
-  filter(GoodLS3) 
-
-
-questions_over_time <- questions_over_time %>% 
-  mutate(name = stringr::str_to_lower(PAIS))
-  
-questions_over_time_MAP <- questions_over_time %>%
-right_join(expand_grid(name =unique(SouthAmericasf$name), YEAR = unique(questions_over_time$YEAR)) %>% filter(!is.na(YEAR))) %>% 
-select(YEAR, name, percent_good_ls3)
-
-SouthAmericas_map_data <- SouthAmericasf %>% left_join(questions_over_time_MAP, by = c('name' = 'name'))
-
-#These two lines, run in the console, fix the error about crs
-#install.packages('devtools')
-#devtools::install_version("transformr", version = "0.1.3")
-library(transformr)
-library(gganimate)
-library(gifski)
-map_anim <- 
-  SouthAmericas_map_data %>% 
-  arrange(YEAR) %>%
-  mutate(LS3_Cat = factor(percent_good_ls3)) %>% 
-  mutate(LS3_Cat = fct_rev(LS3_Cat)) %>% 
-  mutate(LS3_Cat = fct_na_value_to_level(cut(percent_good_ls3,5),level='No Data')) %>%
-  ggplot() +
-  geom_sf(aes(fill = LS3_Cat),linewidth = .05) +
-  labs(fill = '% of Respondents with High Life Satisfaction') +
-  scale_fill_manual(values = c(colorRampPalette(c("white","darkgreen"))(5),'lightgrey')) +
-  theme_map() +
-  theme(legend.background = element_blank()) +
-  theme(legend.position = "right") +
-  transition_states(YEAR) + labs(title = 'High Life Satisfaction in South America: {closest_state}')
-
-animate(map_anim, nframes = 20, fps = 1, renderer = gifski_renderer())
-
-anim_save("ls3_map.gif",map_anim)
-```
-
-
-```{r}
-# Animated basic rights and life satisfaction over time for all countries! - Inbal
-library(gganimate)
-pp_anim <- questions_over_time %>% 
-  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=PAIS)) +
-  geom_text(aes(label =PAIS)) + 
-  geom_hline(yintercept = 40) +
-  geom_vline(xintercept = 35) + theme_classic() + transition_states(YEAR) + labs(title = "High Life Satisfaction and Basic Right Protection Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Percent of Respondents who reported ___", color="Country")
-
-animate(pp_anim, renderer = gifski_renderer())
-
-
-
-```
-
-```{r}
-# LS3 all countries over time animation - Inbal
-library(gganimate)
-pp_anim <- questions_over_time %>% 
-  select(YEAR, PAIS, percent_good_ls3, percent_good_b3, percent_good_dem2, percent_good_soct1) %>% 
-  pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
-  filter(Question == "percent_good_ls3") %>% 
-  ggplot(aes(x=YEAR, y=`Percent Good`, color=PAIS, group = PAIS)) +
-  geom_point() + geom_line() + theme_classic() +
-transition_reveal(YEAR) + labs(title = "High Life Satisfaction Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Year", color="Country")
-
-animate(pp_anim, renderer = gifski_renderer())
-
-anim_save("ls3_scatter_plot.gif", pp_anim)
-
-```
-
-```{r}
-# Scatter plot, faceted by country, LS3 over time - Maya
-
-questions_over_time %>%
-  ggplot(aes(x= YEAR, y=percent_good_ls3)) +
-  geom_point(color = "darkmagenta") +
-  geom_line(color = "darkmagenta") +
-  facet_wrap(~PAIS) +
-  labs(x = "Year", y = "Respondents who Reported High Life Satisfaction (%)", title = "Positive Perception of Life Satisfaction Over Time in South America")+
-   theme_classic()+
-  theme(axis.text.x = element_text(angle = 45, hjust=.7))
-```
-
-```{r}
-
-# Bolivia's LS3 + B3 over time animiation - Flor
-library(gganimate)
-pp_anim <- questions_over_time %>%
-  filter(PAIS == "Bolivia") %>%
-  ggplot() +
-    geom_point(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS)) + geom_path(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS),color = "darkmagenta") +
-  #geom_text(data = __, aes(label =PAIS)) +
-  theme_classic() +
-  labs(title = "Bolivia's High Life Satisfaction and Govt. Protection of Basic Rights", subtitle = "From 2004-2014", x = "Participants who Reported Good Government Protection of Basic Rights (%)" ,y = "Participants who Reported High Life Satisfaction (%)") +
- transition_reveal(YEAR)
-animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
-
-```
-
-```{r}
-# Scatter plot of Bolivia with all 4 questions over time - Flor
-questions_over_time_Bolivia <- questions_over_time
-colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_ls3"] <- "High life satisfaction"
-colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_b3"] <- "Govt. protects basic rights"
-colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_dem2"] <- "Democracy is most preferable"
-colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_soct1"] <- "Good economic situation"
-questions_over_time_Bolivia %>%
-  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy most preferable",  "High life satisfaction")) %>%
-  pivot_longer(3:6, names_to = "Categories", values_to = "Percent Good", values_drop_na = FALSE) %>%
-  filter(PAIS == "Bolivia") %>%
-  ggplot(aes(x=YEAR, y=`Percent Good`, color=Categories)) +
-  geom_point() + geom_line() +
-  labs(title = "Bolivia's Positive Perceptions", subtitle = "Life Satisfaction, Democracy, Basic Rights, and the Economy From 2004 - 2014", x= "Year", y= "Pecrentage of Agreement",fill = '') +
-  theme_classic() + scale_color_brewer(palette = "Pastel2") +
-  theme(plot.title = element_text(face = "bold"))
 
 ```
 
