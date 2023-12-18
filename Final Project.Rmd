@@ -315,15 +315,14 @@ SOCT1_over_time %>%
 questions_over_time <- left_join(LS3_over_time, B3_over_time)
 questions_over_time <- left_join(questions_over_time, DEM2_over_time)
 questions_over_time <- left_join(questions_over_time, SOCT1_over_time)
-
+questions_over_time <- questions_over_time %>% 
+  mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
 
 questions_over_time %>% 
   ggplot(aes(x=percent_good_ls3, y=percent_good_dem2, color=PAIS)) +
   geom_point() +
   facet_wrap(~ YEAR)
 
-questions_over_time <- questions_over_time %>% 
-  mutate(YearCat = cut(YEAR, c(2004,2009,2015), right = FALSE, labels = c('2004-08','2009-14')))
 
 # first half decade
 questions_over_time %>% 
@@ -482,10 +481,16 @@ SouthAmericaLS3 <- SouthAmerica %>%
   group_by(PAIS,YEAR) %>%
   mutate(percent_good_ls3 = 100 * n / sum(n))  %>%
   filter(GoodLS3) 
-  
-SouthAmericaLS3 <- SouthAmericaLS3 %>%  right_join(expand_grid(PAIS =unique(SouthAmericasf$name), YEAR = unique(SouthAmericaLS3$YEAR)) %>% filter(!is.na(YEAR)))
 
-SouthAmericas_map_data <- SouthAmericasf %>% left_join(SouthAmericaLS3, by = c('name' = 'PAIS'))
+
+questions_over_time <- questions_over_time %>% 
+  mutate(name = stringr::str_to_lower(PAIS))
+  
+questions_over_time_MAP <- questions_over_time %>%
+right_join(expand_grid(name =unique(SouthAmericasf$name), YEAR = unique(questions_over_time$YEAR)) %>% filter(!is.na(YEAR))) %>% 
+select(YEAR, name, percent_good_ls3)
+
+SouthAmericas_map_data <- SouthAmericasf %>% left_join(questions_over_time_MAP, by = c('name' = 'name'))
 
 #These two lines, run in the console, fix the error about crs
 #install.packages('devtools')
@@ -521,7 +526,7 @@ pp_anim <- questions_over_time %>%
   ggplot(aes(y=percent_good_ls3, x=percent_good_b3, color=PAIS)) +
   geom_text(aes(label =PAIS)) + 
   geom_hline(yintercept = 40) +
-  geom_vline(xintercept = 35) + theme_classic() + transition_states(YEAR) + labs(title = "High Life Satisfaction and Basic Right Protection Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Percent of Respondents who reported", color="Country")
+  geom_vline(xintercept = 35) + theme_classic() + transition_states(YEAR) + labs(title = "High Life Satisfaction and Basic Right Protection Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Percent of Respondents who reported ___", color="Country")
 
 animate(pp_anim, renderer = gifski_renderer())
 
@@ -537,11 +542,13 @@ pp_anim <- questions_over_time %>%
   pivot_longer(3:6, names_to = "Question", values_to = "Percent Good", values_drop_na = FALSE) %>% 
   filter(Question == "percent_good_ls3") %>% 
   ggplot(aes(x=YEAR, y=`Percent Good`, color=PAIS, group = PAIS)) +
-  geom_point() + geom_line() + transition_reveal(YEAR) + labs(title = "High Life Satisfaction Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Year", color="Country")
+  geom_point() + geom_line() + theme_classic() +
+transition_reveal(YEAR) + labs(title = "High Life Satisfaction Over Time in South America", y="Percent of Respondents who Reported High Life Satisfaction", x="Year", color="Country")
 
 animate(pp_anim, renderer = gifski_renderer())
 
-#Brianna: I think the issue is that Suriname has the travel the farthest and the interpolation is messing up. I don't think there is an easy fix except to use a looping Gif...
+anim_save("ls3_scatter_plot.gif", pp_anim)
+
 ```
 
 ```{r}
@@ -563,9 +570,9 @@ questions_over_time %>%
 library(gganimate)
 pp_anim <- questions_over_time %>%
   filter(PAIS == "Bolivia") %>%
-  ggplot(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS)) +
-    geom_point() + geom_path(color = "darkmagenta") +
-  #geom_text(aes(label =PAIS)) +
+  ggplot() +
+    geom_point(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS)) + geom_path(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS),color = "darkmagenta") +
+  #geom_text(data = __, aes(label =PAIS)) +
   theme_classic() +
   labs(title = "Bolivia's High Life Satisfaction and Govt. Protection of Basic Rights", subtitle = "From 2004-2014", x = "Participants who Reported Good Government Protection of Basic Rights (%)" ,y = "Participants who Reported High Life Satisfaction (%)") +
  transition_reveal(YEAR)
