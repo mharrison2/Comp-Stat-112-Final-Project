@@ -191,17 +191,64 @@ questions_over_time %>%
 
 ```{r}
 
-# Bolivia's LS3 + B3 over time animiation - Flor
+# Bolivia's LS3 + DEM2/SOCT1 over time animation - Flor 
+
+questions_over_time2 <- questions_over_time %>% 
+  filter(PAIS %in% c("Brazil", "Peru", "Chile", "Paraguay")) %>% 
+    select(percent_good_ls3, percent_good_soct1)
+
+#Bolivia's LS3 + SOCT1
+
+#SOCT1
+questions_over_time_Brasil_soct1 <- tibble( x = 34.636119, y = 55.07343)
+questions_over_time_Peru_soct1 <- tibble( x = 18.218352, y = 31.55765)
+questions_over_time_Chile_soct1 <- tibble( x = 26.228462, y = 42.48241)
+questions_over_time_Paraguay_soct1 <- tibble( x = 19.148936, y = 48.79679)
+
 library(gganimate)
 pp_anim <- questions_over_time %>%
   filter(PAIS == "Bolivia") %>%
   ggplot() +
-    geom_point(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS)) + geom_path(aes(y=percent_good_ls3, x=percent_good_b3, group=PAIS),color = "darkmagenta") +
-  #geom_text(data = __, aes(label =PAIS)) +
+    geom_point(aes(y=percent_good_ls3, x=percent_good_soct1, group=PAIS)) + geom_path(aes(y=percent_good_ls3, x=percent_good_soct1, group=PAIS),color = "darkmagenta") +
+  geom_text(data = questions_over_time_Brasil_soct1, aes(y=y, x=x, label = "Brasil")) +
+  geom_text(data = questions_over_time_Peru_soct1, aes(y=y, x=x, label = "Peru")) +
+  geom_text(data = questions_over_time_Chile_soct1, aes(y=y, x=x, label = "Chile")) +
+  geom_text(data = questions_over_time_Paraguay_soct1, aes(y=y, x=x, label = "Paraguay")) +
   theme_classic() +
-  labs(title = "Bolivia's High Life Satisfaction and Govt. Protection of Basic Rights", subtitle = "From 2004-2014", x = "Participants who Reported Good Government Protection of Basic Rights (%)" ,y = "Participants who Reported High Life Satisfaction (%)") +
+  labs(title = "Bolivia's High Life Satisfaction and Economy", subtitle = "From 2004-2014", x = "Percentage of  Participants who Reported Good/Very Good Economic Situation" ,y = "Percentage of Participants who Reported High Life Satisfaction") +
  transition_reveal(YEAR)
-animate(pp_anim, nframes = 20, fps = 1,renderer = av_renderer())
+
+animate(pp_anim, renderer = gifski_renderer())
+
+anim_save("ls3_soct1", pp_anim)
+
+
+#Bolivia's LS3 + DEM2
+
+#DEM2
+questions_over_time_Brasil_dem2 <- tibble( x = 64.96403, y = 55.07343)
+questions_over_time_Peru_dem2 <- tibble( x = 66.04317, y = 31.55765)
+questions_over_time_Chile_dem2 <- tibble( x = 73.29060, y = 42.48241)
+questions_over_time_Paraguay_dem2 <- tibble( x = 60.84071, y = 48.79679)
+
+library(gganimate)
+
+pp_anim <- questions_over_time %>%
+  filter(PAIS == "Bolivia") %>%
+  ggplot() +
+    geom_point(aes(y=percent_good_ls3, x=percent_good_dem2, group=PAIS)) + 
+  geom_path(aes(y=percent_good_ls3, x=percent_good_dem2, group=PAIS),color = "darkmagenta") +
+  geom_text(data = questions_over_time_Brasil_dem2, aes(y=y, x=x, label = "Brasil")) +
+  geom_text(data = questions_over_time_Peru_dem2, aes(y=y, x=x, label = "Peru")) +
+  geom_text(data = questions_over_time_Chile_dem2, aes(y=y, x=x, label = "Chile")) +
+  geom_text(data = questions_over_time_Paraguay_dem2, aes(y=y, x=x, label = "Paraguay")) +
+  theme_classic() +
+  labs(title = "Bolivia's High Life Satisfaction and Democray", subtitle = "From 2004-2014", x = "Percentage of Participants who Reported Democracy as Preferable" ,y = "Percentage of Participants who Reported High Life Satisfaction") +
+ transition_reveal(YEAR)
+
+animate(pp_anim, renderer = gifski_renderer())
+
+anim_save("ls3_DEM2", pp_anim)
 
 ```
 
@@ -212,15 +259,17 @@ colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "
 colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_b3"] <- "Govt. protects basic rights"
 colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_dem2"] <- "Democracy is most preferable"
 colnames(questions_over_time_Bolivia)[colnames(questions_over_time_Bolivia) == "percent_good_soct1"] <- "Good economic situation"
+
 questions_over_time_Bolivia %>%
-  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy most preferable",  "High life satisfaction")) %>%
+  select(c("YEAR", "PAIS", "Good economic situation", "Govt. protects basic rights", "Democracy is most preferable", "High life satisfaction")) %>%
   pivot_longer(3:6, names_to = "Categories", values_to = "Percent Good", values_drop_na = FALSE) %>%
   filter(PAIS == "Bolivia") %>%
   ggplot(aes(x=YEAR, y=`Percent Good`, color=Categories)) +
-  geom_point() + geom_line() +
+  geom_point() + geom_line() + 
   labs(title = "Bolivia's Positive Perceptions", subtitle = "Life Satisfaction, Democracy, Basic Rights, and the Economy From 2004 - 2014", x= "Year", y= "Pecrentage of Agreement",fill = '') +
-  theme_classic() + scale_color_brewer(palette = "Pastel2") +
-  theme(plot.title = element_text(face = "bold"))
+  theme_classic() + scale_color_brewer(palette = "pastel2") +
+#  scale_color_manual(values = c("Good economic situation" = "darkolivegreen3", "Govt. protects basic rights" = "darkolivegreen4", "Democracy is most preferable" = "darkolivegreen2", "High life satisfaction" = "darkorchid4" )) 
+  scale_color_manual(values = c("Good economic situation" = "darkorchid4", "Govt. protects basic rights" = "chocolate4", "Democracy is most preferable" = "chocolate1", "High life satisfaction" = "darkturquoise" )) 
 
 ```
 
